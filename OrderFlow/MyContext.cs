@@ -35,6 +35,9 @@ public class MyContext(DbContextOptions options) : DbContext(options)
     public void Evolve(object from, object to)
     {
         Entry(from).State = EntityState.Detached;
-        Entry(to).State = EntityState.Modified;
+        var entry = Attach(to);
+        entry.State = EntityState.Modified;
+        // foreach (var nav in entry.Navigations)
+        //     nav.
     }
 }
