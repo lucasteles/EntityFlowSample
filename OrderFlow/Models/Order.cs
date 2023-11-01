@@ -6,19 +6,14 @@ public abstract class Order(Order.StatusEnum status)
 {
     public OrderId Id { get; init; } = OrderId.New();
     public StatusEnum Status { get; private init; } = status;
-
     public required decimal Amount { get; init; }
     public required DateTime CreatedAt { get; init; }
 
-    readonly HashSet<OrderHistory> history = new();
+    readonly List<OrderHistory> history = new();
 
-    public IReadOnlyList<OrderHistory> History
-    {
-        get => history.ToArray();
-        protected init => history = value.ToHashSet();
-    }
+    public IReadOnlyList<OrderHistory> History => history.AsReadOnly();
 
-    protected void TakePhoto(DateTime date) =>
+    public void TakePhoto(DateTime date) =>
         history.Add(new(date, Status, JsonSerializer.SerializeToElement(this)));
 
     public enum StatusEnum
@@ -38,50 +33,64 @@ public abstract class Order(Order.StatusEnum status)
     {
         public required string Owner { get; init; }
 
-        public Confirmed Confirm(DateTime date) =>
-            new()
+        public Confirmed Confirm(DateTime date)
+        {
+            Confirmed next = new()
             {
                 Id = Id,
                 Amount = Amount,
                 CreatedAt = CreatedAt,
                 ConfirmedAt = date,
-                History = History,
             };
 
-        public Cancelled Cancel(DateTime date) =>
-            new()
+            next.TakePhoto(date);
+            return next;
+        }
+
+        public Cancelled Cancel(DateTime date)
+        {
+            Cancelled next = new()
             {
                 Id = Id,
                 Amount = Amount,
                 CreatedAt = CreatedAt,
                 CancelledAt = date,
-                History = History,
             };
+
+            next.TakePhoto(date);
+            return next;
+        }
     }
 
     public class Confirmed() : Order(StatusEnum.Confirmed), ICancellable
     {
         public required DateTime ConfirmedAt { get; init; }
 
-        public Finalized Finalize(DateTime date) =>
-            new()
+        public Finalized Finalize(DateTime date)
+        {
+            Finalized next = new()
             {
                 Id = Id,
                 Amount = Amount,
                 CreatedAt = CreatedAt,
                 FinalizedAt = date,
-                History = History,
             };
+            next.TakePhoto(date);
+            return next;
+        }
 
-        public Cancelled Cancel(DateTime date) =>
-            new()
+        public Cancelled Cancel(DateTime date)
+        {
+            Cancelled next = new()
             {
                 Id = Id,
                 Amount = Amount,
                 CreatedAt = CreatedAt,
                 CancelledAt = date,
-                History = History,
             };
+            next.TakePhoto(date);
+            return next;
+        }
     }
 
     public class Cancelled() : Order(StatusEnum.Cancelled)

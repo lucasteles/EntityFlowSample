@@ -16,21 +16,20 @@ public class MyContext(DbContextOptions options) : DbContext(options)
         order.Metadata.FindNavigation(nameof(Order.History))
             ?.SetPropertyAccessMode(PropertyAccessMode.Field);
 
-        order.OwnsMany(x => x.History);
         order
             .HasDiscriminator(o => o.Status)
             .HasValue<Order.Pending>(Order.StatusEnum.Pending)
             .HasValue<Order.Confirmed>(Order.StatusEnum.Confirmed)
             .HasValue<Order.Cancelled>(Order.StatusEnum.Cancelled)
-            .HasValue<Order.Finalized>(Order.StatusEnum.Finalized)
-            ;
+            .HasValue<Order.Finalized>(Order.StatusEnum.Finalized);
 
-        var orderHistory = builder.Entity<OrderHistory>();
-        orderHistory.HasKey("Id");
-        orderHistory.Property<int>("Id")
-            .HasColumnType("int").ValueGeneratedOnAdd();
-
-        orderHistory.Property(h => h.Photo).HasColumnType("jsonb");
+        order.OwnsMany(x => x.History, h =>
+        {
+            h.HasKey("Id");
+            h.Property<int>("Id")
+                .HasColumnType("int").ValueGeneratedOnAdd();
+            h.Property(p => p.Photo).HasColumnType("jsonb");
+        });
     }
 
     public void Evolve(object from, object to)
