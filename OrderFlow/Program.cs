@@ -1,18 +1,21 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using OrderFlow;
-using OrderFlow.Data;
+using OrderFlow.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
-    .AddEndpointsApiExplorer()
-    .AddSwaggerGen()
     .ConfigureHttpJsonOptions(opt => opt.SerializerOptions
         .Converters.Add(new JsonStringEnumConverter()))
     .AddSingleton(TimeProvider.System)
-    .AddScoped<OrderRepository>()
     .AddDbContext<MyContext>(opt => opt
-        .UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+        .UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")))
+    .AddEndpointsApiExplorer()
+    .AddSwaggerGen(opt =>
+    {
+        opt.MapType<OrderId>(() => new OpenApiSchema {Type = "string", Format = "uuid"});
+    });
 
 var app = builder.Build();
 

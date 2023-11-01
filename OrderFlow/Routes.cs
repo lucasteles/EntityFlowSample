@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using OrderFlow.Data;
 using OrderFlow.Models;
 
 namespace OrderFlow;
@@ -11,52 +10,55 @@ public static class Routes
 {
     public static void MapRoutes(this IEndpointRouteBuilder app)
     {
-        var orders = app.MapGroup("orders");
-        orders.MapGet("/", (OrderRepository db) => db.Orders.ToListAsync());
-        orders.MapGet("/{id}",
+        var route = app.MapGroup("orders");
+        route.MapGet("/", (MyContext db) => db.Orders.ToListAsync());
+        route.MapGet("/{id}",
             async Task<Results<Ok<Order>, NotFound>>
-                (OrderRepository db, OrderId id) =>
+                (MyContext db, OrderId id) =>
                 await db.Orders.FindAsync(id) is not { } order
                     ? NotFound()
                     : Ok(order)
         );
 
-        orders.MapPost("/",
-            async Task<Results<Created, BadRequest>>
-                (OrderRepository db, TimeProvider time, NewOrder newOrder) =>
+        route.MapPost("/",
+            async Task<Results<Created<Order>, BadRequest>>
+                (MyContext db, TimeProvider time, NewOrder newOrder) =>
             {
                 if (newOrder is not {Amount: > 0, Owner: not null and not ""})
                     return BadRequest();
 
                 Order.Pending order = new()
                 {
-                    CreatedAt = time.GetUtcNow().UtcDateTime,
+                    CreatedAt = time.UtcNow(),
                     Amount = newOrder.Amount,
                     Owner = newOrder.Owner,
                 };
                 db.Orders.Add(order);
-                await db.Save();
-                return Created();
+                await db.SaveChangesAsync();
+                return Created($"orders/{order.Id}", order as Order);
             });
 
-        orders.MapPost("/{id}/confirm",
+        route.MapPost("/{id}/confirm",
             async Task<Results<NotFound, NoContent, UnprocessableEntity>>
-                (OrderRepository db, TimeProvider time, OrderId id) =>
+                (MyContext db, TimeProvider time, OrderId id) =>
             {
-                if (await db.Pending.FirstOrDefaultAsync(x => x.Id == id) is not { } pending)
+                if (await db.Orders.FindById(id) is not { } order)
                     return NotFound();
 
-                var confirmed = pending.Confirm(time.GetUtcNow().UtcDateTime);
+                if (order is not Order.Pending pending)
+                    return UnprocessableEntity();
+
+                var confirmed = pending.Confirm(time.UtcNow());
 
                 db.Evolve(pending, confirmed);
-                await db.Save();
+                await db.SaveChangesAsync();
 
                 return NoContent();
             });
 
-        orders.MapPost("/{id}/cancel",
+        route.MapPost("/{id}/cancel",
             async Task<Results<NotFound, NoContent, UnprocessableEntity>>
-                (OrderRepository db, TimeProvider time, OrderId id) =>
+                (MyContext db, TimeProvider time, OrderId id) =>
             {
                 if (await db.Orders.FirstOrDefaultAsync(x => x.Id == id)
                     is not { } order)
@@ -65,30 +67,30 @@ public static class Routes
                 if (order is not Order.ICancellable cancellable)
                     return UnprocessableEntity();
 
-                var cancelled = cancellable.Cancel(time.GetUtcNow().UtcDateTime);
+                var cancelled = cancellable.Cancel(time.UtcNow());
 
                 db.Evolve(order, cancelled);
-                await db.Save();
+                await db.SaveChangesAsync();
 
                 return NoContent();
             });
-        
-        orders.MapPost("/{id}/finalize",
-            async Task<Results<NotFound, NoContent>>
-                (OrderRepository db, TimeProvider time, OrderId id) =>
+
+        route.MapPost("/{id}/finalize",
+            async Task<Results<NotFound, NoContent, UnprocessableEntity>>
+                (MyContext db, TimeProvider time, OrderId id) =>
             {
-                if (await db.Pending.FirstOrDefaultAsync(x => x.Id == id) is not { } pending)
+                if (await db.Orders.FindById(id) is not { } order)
                     return NotFound();
 
-                var confirmed = pending.Confirm(time.GetUtcNow().UtcDateTime);
+                if (order is not Order.Confirmed confirmed)
+                    return UnprocessableEntity();
 
-                db.Evolve(pending, confirmed);
-                await db.Save();
+                var finalized = confirmed.Finalize(time.UtcNow());
+
+                db.Evolve(confirmed, finalized);
+                await db.SaveChangesAsync();
 
                 return NoContent();
             });
-        
     }
-
-    record NewOrder(decimal Amount, string Owner);
 }

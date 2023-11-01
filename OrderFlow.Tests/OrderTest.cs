@@ -1,7 +1,4 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query.Internal;
 using NUnit.Framework;
-using OrderFlow.Data;
 using OrderFlow.Models;
 
 namespace OrderFlow.Tests;

@@ -1,12 +1,25 @@
-﻿namespace OrderFlow.Models;
+﻿using System.Text.Json;
+
+namespace OrderFlow.Models;
 
 public abstract class Order(Order.StatusEnum status)
 {
     public OrderId Id { get; init; } = OrderId.New();
+    public StatusEnum Status { get; private init; } = status;
+
     public required decimal Amount { get; init; }
     public required DateTime CreatedAt { get; init; }
 
-    public StatusEnum Status { get; private set; } = status;
+    readonly HashSet<OrderHistory> history = new();
+
+    public IReadOnlyList<OrderHistory> History
+    {
+        get => history.ToArray();
+        protected init => history = value.ToHashSet();
+    }
+
+    protected void TakePhoto(DateTime date) =>
+        history.Add(new(date, Status, JsonSerializer.SerializeToElement(this)));
 
     public enum StatusEnum
     {
@@ -32,6 +45,7 @@ public abstract class Order(Order.StatusEnum status)
                 Amount = Amount,
                 CreatedAt = CreatedAt,
                 ConfirmedAt = date,
+                History = History,
             };
 
         public Cancelled Cancel(DateTime date) =>
@@ -41,6 +55,7 @@ public abstract class Order(Order.StatusEnum status)
                 Amount = Amount,
                 CreatedAt = CreatedAt,
                 CancelledAt = date,
+                History = History,
             };
     }
 
@@ -55,6 +70,7 @@ public abstract class Order(Order.StatusEnum status)
                 Amount = Amount,
                 CreatedAt = CreatedAt,
                 FinalizedAt = date,
+                History = History,
             };
 
         public Cancelled Cancel(DateTime date) =>
@@ -64,6 +80,7 @@ public abstract class Order(Order.StatusEnum status)
                 Amount = Amount,
                 CreatedAt = CreatedAt,
                 CancelledAt = date,
+                History = History,
             };
     }
 
