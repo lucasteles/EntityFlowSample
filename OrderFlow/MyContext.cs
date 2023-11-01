@@ -23,13 +23,13 @@ public class MyContext(DbContextOptions options) : DbContext(options)
             .HasValue<Order.Cancelled>(Order.StatusEnum.Cancelled)
             .HasValue<Order.Finalized>(Order.StatusEnum.Finalized);
 
-        order.OwnsMany(x => x.History, h =>
-        {
-            h.HasKey("Id");
-            h.Property<int>("Id")
-                .HasColumnType("int").ValueGeneratedOnAdd();
-            h.Property(p => p.Photo).HasColumnType("jsonb");
-        });
+        order.HasMany(o => o.History).WithOne().OnDelete(DeleteBehavior.Cascade);
+        order.Navigation(o => o.History).AutoInclude();
+
+        var orderHistory = builder.Entity<OrderHistory>();
+        orderHistory.Property<int>("Id").HasColumnType("int").ValueGeneratedOnAdd();
+        orderHistory.HasKey("Id");
+        orderHistory.Property(h => h.Photo).HasColumnType("jsonb");
     }
 
     public void Evolve(object from, object to)
