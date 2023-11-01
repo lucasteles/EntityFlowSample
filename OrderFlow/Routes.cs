@@ -33,7 +33,7 @@ public static class Routes
                     Amount = newOrder.Amount,
                     Owner = newOrder.Owner,
                 };
-                order.TakePhoto(time.UtcNow());
+                
                 db.Orders.Add(order);
                 await db.SaveChangesAsync();
                 return Created($"orders/{order.Id}", order as Order);
