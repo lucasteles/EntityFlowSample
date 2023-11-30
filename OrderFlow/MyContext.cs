@@ -37,7 +37,7 @@ public class MyContext(DbContextOptions options) : DbContext(options)
     {
         var source = Entry(from);
         source.State = EntityState.Detached;
-        var target = Attach(to);
+        var target = Entry(to);
         target.State = EntityState.Modified;
 
         foreach (var targetNav in target.Navigations)
@@ -45,35 +45,10 @@ public class MyContext(DbContextOptions options) : DbContext(options)
             {
                 case CollectionEntry {CurrentValue: { } values}:
                     foreach (var item in values)
-                    {
-                        var entry = Entry(item);
-                        if (entry.State is EntityState.Detached)
-                            Attach(item);
-                    }
+                        if (Entry(item) is {State: EntityState.Detached} entry)
+                            entry.State = EntityState.Added;
 
                     break;
             }
-
-        // foreach (var targetNav in target.Navigations)
-        //     switch (targetNav)
-        //     {
-        //         case ReferenceEntry entry:
-        //             if (source.References.SingleOrDefault(x =>
-        //                     x.Metadata.Name == entry.Metadata.Name
-        //                     && x.Metadata.ClrType == entry.Metadata.ClrType
-        //                 ) is { } reference)
-        //                 entry.CurrentValue = reference.CurrentValue;
-        //
-        //             break;
-        //
-        //         case CollectionEntry entry:
-        //             if (source.Collections.SingleOrDefault(x =>
-        //                     x.Metadata.Name == entry.Metadata.Name
-        //                     && x.Metadata.ClrType == entry.Metadata.ClrType
-        //                 ) is { } collection)
-        //                 entry.CurrentValue = collection.CurrentValue ;
-        //
-        //             break;
-        //     }
     }
 }

@@ -36,7 +36,7 @@ public abstract class Order(Order.StatusEnum status)
     public class Pending() : Order(StatusEnum.Pending), ICancellable
     {
         public required string Owner { get; init; }
-
+        
         public Confirmed Confirm(DateTime date)
         {
             Confirmed next = new()

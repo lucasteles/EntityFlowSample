@@ -23,15 +23,20 @@ public class Tests
         db.Orders.Add(pending);
         await db.SaveChangesAsync();
 
-        // Order is confirmed, so it is "evolved"
+        // Order confirmation, so it is "evolved"
         // to a Confirmed type 
         var confirmAt = time.UtcNow().AddDays(1);
         Order.Confirmed confirmed = pending.Confirm(confirmAt);
         db.Evolve(pending, confirmed); // <- swap entities
         await db.SaveChangesAsync();
 
-        await foreach (var order in db.Orders.AsNoTracking().Include(r => r.History)
-                           .AsAsyncEnumerable())
+        // Order finalization, so it is "evolved"
+        var finalizedAt = time.UtcNow().AddDays(1);
+        Order.Finalized finalized = confirmed.Finalize(confirmAt);
+        db.Evolve(confirmed, finalized); // <- swap entities
+        await db.SaveChangesAsync();
+
+        await foreach (var order in db.Orders.AsNoTracking().AsAsyncEnumerable())
             order.Inspect();
 
         var res = await db.Query("SELECT * From \"Orders\"");
