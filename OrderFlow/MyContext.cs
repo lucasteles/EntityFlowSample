@@ -17,6 +17,8 @@ public class MyContext(DbContextOptions options) : DbContext(options)
         order.Metadata.FindNavigation(nameof(Order.History))
             ?.SetPropertyAccessMode(PropertyAccessMode.Field);
 
+        order.Property(o => o.Status).HasConversion<string>();
+        
         order
             .HasDiscriminator(o => o.Status)
             .HasValue<Order.Pending>(Order.StatusEnum.Pending)

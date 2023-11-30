@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
-using NUnit.Framework;
 
 namespace OrderFlow.Tests;
 
@@ -36,7 +35,11 @@ public static class Extensions
         {
             Dictionary<string, object?> line = new();
             for (var i = 0; i < reader.FieldCount; i++)
-                line.Add(reader.GetName(i), reader.GetValue(i));
+            {
+                var value = reader.GetValue(i);
+                if (value == DBNull.Value) continue;
+                line.Add(reader.GetName(i), value);
+            }
 
             result.Add(line);
         }

@@ -31,15 +31,18 @@ public class Tests
         await db.SaveChangesAsync();
 
         // Order finalization, so it is "evolved"
-        var finalizedAt = time.UtcNow().AddDays(1);
+        var finalizedAt = time.UtcNow().AddDays(2);
         Order.Finalized finalized = confirmed.Finalize(confirmAt);
         db.Evolve(confirmed, finalized); // <- swap entities
         await db.SaveChangesAsync();
-
+        
         await foreach (var order in db.Orders.AsNoTracking().AsAsyncEnumerable())
             order.Inspect();
 
+        Console.WriteLine("------------------------------------");
+        
         var res = await db.Query("SELECT * From \"Orders\"");
+        res.Inspect();
         Assert.That(res[0]["Owner"], Is.EqualTo("Lucas"));
     }
 }
