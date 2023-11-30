@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using OrderFlow.Models;
 
 namespace OrderFlow;
@@ -34,10 +35,45 @@ public class MyContext(DbContextOptions options) : DbContext(options)
 
     public void Evolve(object from, object to)
     {
-        Entry(from).State = EntityState.Detached;
-        var entry = Attach(to);
-        entry.State = EntityState.Modified;
-        // foreach (var nav in entry.Navigations)
-        //     nav.
+        var source = Entry(from);
+        source.State = EntityState.Detached;
+        var target = Attach(to);
+        target.State = EntityState.Modified;
+
+        foreach (var targetNav in target.Navigations)
+            switch (targetNav)
+            {
+                case CollectionEntry {CurrentValue: { } values}:
+                    foreach (var item in values)
+                    {
+                        var entry = Entry(item);
+                        if (entry.State is EntityState.Detached)
+                            Attach(item);
+                    }
+
+                    break;
+            }
+
+        // foreach (var targetNav in target.Navigations)
+        //     switch (targetNav)
+        //     {
+        //         case ReferenceEntry entry:
+        //             if (source.References.SingleOrDefault(x =>
+        //                     x.Metadata.Name == entry.Metadata.Name
+        //                     && x.Metadata.ClrType == entry.Metadata.ClrType
+        //                 ) is { } reference)
+        //                 entry.CurrentValue = reference.CurrentValue;
+        //
+        //             break;
+        //
+        //         case CollectionEntry entry:
+        //             if (source.Collections.SingleOrDefault(x =>
+        //                     x.Metadata.Name == entry.Metadata.Name
+        //                     && x.Metadata.ClrType == entry.Metadata.ClrType
+        //                 ) is { } collection)
+        //                 entry.CurrentValue = collection.CurrentValue ;
+        //
+        //             break;
+        //     }
     }
 }

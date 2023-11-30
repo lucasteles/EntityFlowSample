@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using NUnit.Framework;
 
 namespace OrderFlow.Tests;
 
@@ -23,17 +24,23 @@ public static class Extensions
         }
     }
 
-    public static async Task<IDictionary<string, object?>> Query(
+    public static async Task<IReadOnlyList<IDictionary<string, object?>>> Query(
         this DbContext context, string sqlCommand)
     {
         await using var command = context.Database.GetDbConnection().CreateCommand();
         command.CommandText = sqlCommand;
         await context.Database.OpenConnectionAsync();
         await using var reader = await command.ExecuteReaderAsync();
-        Dictionary<string, object?> result = new();
+        List<IDictionary<string, object?>> result = new();
         while (await reader.ReadAsync())
+        {
+            Dictionary<string, object?> line = new();
             for (var i = 0; i < reader.FieldCount; i++)
-                result.Add(reader.GetName(i), reader.GetValue(i));
+                line.Add(reader.GetName(i), reader.GetValue(i));
+
+            result.Add(line);
+        }
+
         return result;
     }
 }

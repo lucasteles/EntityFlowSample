@@ -8,13 +8,17 @@ public abstract class Order(Order.StatusEnum status)
     public StatusEnum Status { get; private init; } = status;
     public required decimal Amount { get; init; }
     public required DateTime CreatedAt { get; init; }
+    public DateTime? UpdatedAt { get; private set; }
 
     readonly List<OrderHistory> history = new();
 
     public IReadOnlyList<OrderHistory> History => history.AsReadOnly();
 
-    public void TakePhoto(DateTime date) =>
+    public void Updated(DateTime date)
+    {
+        UpdatedAt = date;
         history.Add(new(date, Status, JsonSerializer.SerializeToElement(this)));
+    }
 
     public enum StatusEnum
     {
@@ -43,7 +47,7 @@ public abstract class Order(Order.StatusEnum status)
                 ConfirmedAt = date,
             };
 
-            next.TakePhoto(date);
+            next.Updated(date);
             return next;
         }
 
@@ -57,7 +61,7 @@ public abstract class Order(Order.StatusEnum status)
                 CancelledAt = date,
             };
 
-            next.TakePhoto(date);
+            next.Updated(date);
             return next;
         }
     }
@@ -75,7 +79,7 @@ public abstract class Order(Order.StatusEnum status)
                 CreatedAt = CreatedAt,
                 FinalizedAt = date,
             };
-            next.TakePhoto(date);
+            next.Updated(date);
             return next;
         }
 
@@ -88,7 +92,7 @@ public abstract class Order(Order.StatusEnum status)
                 CreatedAt = CreatedAt,
                 CancelledAt = date,
             };
-            next.TakePhoto(date);
+            next.Updated(date);
             return next;
         }
     }

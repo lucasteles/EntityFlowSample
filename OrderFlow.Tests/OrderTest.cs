@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 using OrderFlow.Models;
 
@@ -24,15 +25,16 @@ public class Tests
 
         // Order is confirmed, so it is "evolved"
         // to a Confirmed type 
-        Order.Confirmed confirmed = pending.Confirm(time.UtcNow().AddDays(1));
+        var confirmAt = time.UtcNow().AddDays(1);
+        Order.Confirmed confirmed = pending.Confirm(confirmAt);
         db.Evolve(pending, confirmed); // <- swap entities
         await db.SaveChangesAsync();
 
-        await foreach (var order in db.Orders)
+        await foreach (var order in db.Orders.AsNoTracking().Include(r => r.History)
+                           .AsAsyncEnumerable())
             order.Inspect();
 
         var res = await db.Query("SELECT * From \"Orders\"");
-        res.Inspect();
-        Assert.That(res["Owner"], Is.EqualTo("Lucas"));
+        Assert.That(res[0]["Owner"], Is.EqualTo("Lucas"));
     }
 }
