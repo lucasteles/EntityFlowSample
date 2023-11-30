@@ -30,17 +30,16 @@ public static class Extensions
         command.CommandText = sqlCommand;
         await context.Database.OpenConnectionAsync();
         await using var reader = await command.ExecuteReaderAsync();
-        List<IDictionary<string, object?>> result = new();
+        List<IDictionary<string, object?>> result = [];
         while (await reader.ReadAsync())
         {
-            Dictionary<string, object?> line = new();
+            Dictionary<string, object?> line = [];
             for (var i = 0; i < reader.FieldCount; i++)
             {
                 var value = reader.GetValue(i);
                 if (value == DBNull.Value) continue;
                 line.Add(reader.GetName(i), value);
             }
-
             result.Add(line);
         }
 
